@@ -4,8 +4,6 @@ from routes import register_apps
 def create_app():
     app = Flask(__name__)
 
-    app.config.from_object('config.Config')
-
     init_db(app)
     register_apps(app)
 
