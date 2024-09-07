@@ -65,3 +65,23 @@ def extract_links(soup, base_url):
                 'text': link.text.strip()
             })
     return links
+def get_chatbot_links(chatbot_id):
+    try:
+        response = supabase.table('chatbot_scraped_content').select('*').eq('chatbot_id', chatbot_id).execute()
+        
+        if response.data:
+            return {
+                'message': 'Data retrieved successfully',
+                'status': 200,
+                'data': response.data
+            }
+        else:
+            return {
+                'message': 'No data found for the given chatbot ID',
+                'status': 404
+            }
+    except Exception as e:
+        return {
+            'message': f'Error retrieving data: {str(e)}',
+            'status': 500
+        }

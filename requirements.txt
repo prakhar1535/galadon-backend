@@ -4,4 +4,5 @@ python-dotenv
 uuid
 gunicorn
 bs4
-urllib
+requests
+unicorn
