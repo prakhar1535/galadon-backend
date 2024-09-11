@@ -6,3 +6,4 @@ gunicorn
 bs4
 requests
 unicorn
+flask_cors
