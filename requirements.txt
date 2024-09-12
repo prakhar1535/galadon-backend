@@ -5,4 +5,5 @@ uuid
 gunicorn
 bs4
 requests
+# flask_cors
 unicorn
