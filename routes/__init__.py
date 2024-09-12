@@ -9,6 +9,7 @@ from routes.add_link_scrape import Scrap
 from routes.lead_routes import LeadRoutes
 from routes.addClient import  ClientRoutes
 from routes.addCredits import CreditsRoutes
+from routes.file_upload import FileUploadRoutes
 
 def register_apps(app):
     app.register_blueprint(test.testRoute)
@@ -21,3 +22,4 @@ def register_apps(app):
     app.register_blueprint(LeadRoutes.lead_bp) 
     app.register_blueprint(ClientRoutes.client_bp) 
     app.register_blueprint(CreditsRoutes.credits_bp)
+    app.register_blueprint(FileUploadRoutes.file_upload_bp)
