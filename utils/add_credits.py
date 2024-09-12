@@ -1,17 +1,26 @@
 from db.db import supabase
+from datetime import datetime
 
-def add_credits(chatbot_id, credits):
+def add_credits(data):
     try:
-        # Directly update the credits
-        response = supabase.table('chatbots').update({'credits': credits}).eq('chatbotId', chatbot_id).execute()
+        # Prepare the data for upsert
+        credit_data = {
+            'chatbotId': data.get('chatbotId', ''),
+            'credits': data.get('credits', 1),
+            'updated_date': datetime.utcnow().isoformat(),
+            'client_id': data.get('client_id', '')
+        }
+
+        # Use upsert to insert or update the record
+        response = supabase.table('credit').insert(credit_data).execute()
         
         if response.data:
             return {
                 'message': 'Credits updated successfully',
                 'status': 200,
-                'data': {'chatbotId': chatbot_id, 'credits': credits}
+                'data': [dict(item) for item in response.data]  # Convert each item to a dictionary
             }
         else:
-            return {'message': 'Failed to update credits or chatbot not found', 'status': 404}
+            return {'message': 'Failed to update credits', 'status': 500}
     except Exception as e:
         return {'message': str(e), 'status': 500}

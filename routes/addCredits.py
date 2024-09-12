@@ -1,17 +1,29 @@
 from flask import Blueprint, request, jsonify
 from utils.add_credits import add_credits
+from utils.getCredits import get_credits
 
 class CreditsRoutes:
     credits_bp = Blueprint('credits_bp', __name__)
 
+    
     @credits_bp.route('/add-credits', methods=['POST'])
     def add_credits_route():
         data = request.json
-        chatbot_id = data.get('chatbot_id')
-        credits = data.get('credits')
+        if not data:
+            return jsonify({'message': 'No input data provided', 'status': 400}), 400
 
-        if not chatbot_id or not isinstance(credits, int):
-            return jsonify({'message': 'Invalid input. Please provide chatbot_id and credits (integer).'}), 400
+        result = add_credits(data)
+        return jsonify(result), result['status']
 
-        result = add_credits(chatbot_id, credits)
+    
+    @credits_bp.route('/get-credits', methods=['GET'])
+    def get_credits_route():
+        chatbot_id = request.args.get('chatbotId')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        if not all([chatbot_id, start_date, end_date]):
+            return jsonify({'message': 'Missing required parameters', 'status': 400}), 400
+
+        result = get_credits(chatbot_id, start_date, end_date)
         return jsonify(result), result['status']
