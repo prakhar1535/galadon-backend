@@ -8,6 +8,8 @@ from routes.get_chat import GetChat
 from routes.add_link_scrape import Scrap
 from routes.lead_routes import LeadRoutes
 from routes.addClient import  ClientRoutes
+from routes.addCredits import CreditsRoutes
+
 def register_apps(app):
     app.register_blueprint(test.testRoute)
     app.register_blueprint(ChatbotRoutes.chatbot_bp)
@@ -18,3 +20,4 @@ def register_apps(app):
     app.register_blueprint(Scrap.scrape_bp)
     app.register_blueprint(LeadRoutes.lead_bp) 
     app.register_blueprint(ClientRoutes.client_bp) 
+    app.register_blueprint(CreditsRoutes.credits_bp)
