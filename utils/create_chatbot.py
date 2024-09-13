@@ -6,10 +6,7 @@ def create_chatbot(data):
 
     chatbot_data = {
         'chatbotId': chatbot_id,
-        'fontColor': data.get('fontColor', ''),
-        'themeColor': data.get('themeColor', ''),
         "user": data.get("user", []),
-        'font': data.get('font', ''),
         'model': data.get('model', ''),
         'systemPrompt': data.get('systemPrompt', ''),
         'suggestedMessage': data.get('suggestedMessage', ''),
@@ -17,6 +14,14 @@ def create_chatbot(data):
         'get_user_name': data.get('get_user_name', True),
         'get_user_email': data.get('get_user_email', True),
         'get_user_phone': data.get('get_user_phone', True),
+        'branding': data.get('branding', True),
+        'status': data.get('status', True),
+        'send_email': data.get('send_email', []),
+        'name_msg': data.get('name_msg', ''),
+        'email_msg': data.get('email_msg', ''),
+        'phone_msg': data.get('phone_msg', ''),
+        'client_id': data.get('client_id', ''),
+        'chatbot_name': data.get('chatbot_name', '')
     }
 
     response = supabase.table('chatbots').insert(chatbot_data).execute()
