@@ -1,8 +1,39 @@
-from bs4 import BeautifulSoup
 import requests
+from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import uuid
 from db.db import supabase
+
+def deep_scrape(url, base_url, depth=1):
+    if depth == 0:
+        return None
+
+    try:
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        title = soup.title.string if soup.title else ''
+        content = extract_content(soup)
+        content_length = len(content)
+        
+        links = []
+        for link in soup.find_all('a', href=True):
+            full_url = urljoin(base_url, link['href'])
+            if base_url in full_url:
+                sub_content = deep_scrape(full_url, base_url, depth - 1)
+                if sub_content:
+                    links.append(sub_content)
+        
+        return {
+            'url': url,
+            'title': title,
+            'content': content,
+            'content_length': content_length,
+            'links': links
+        }
+    except Exception as e:
+        print(f"Error scraping {url}: {str(e)}")
+        return None
 
 def scrape_and_add_link(data):
     chatbot_id = data.get('chatbotId')
@@ -12,23 +43,31 @@ def scrape_and_add_link(data):
         return {'message': 'Chatbot ID and URL are required', 'status': 400}
 
     try:
-        response = requests.get(url)
-        soup = BeautifulSoup(response.text, 'html.parser')
+        scraped_data = deep_scrape(url, url, depth=2)  # Adjust depth as needed
         
-        title = soup.title.string if soup.title else ''
-        content = extract_content(soup)
-        links = extract_links(soup, url)
+        if not scraped_data:
+            return {'message': f'Failed to scrape {url}', 'status': 500}
+        
+        total_content_length = scraped_data['content_length'] + sum(link['content_length'] for link in scraped_data['links'])
         
         scrape_id = str(uuid.uuid4())
         
-        insert_response = supabase.table('chatbot_scraped_content').insert({
+        insert_data = {
             'id': scrape_id,
             'chatbot_id': chatbot_id,
             'url': url,
-            'title': title,
-            'content': content,
-            'links': links
-        }).execute()
+            'title': scraped_data['title'],
+            'content': scraped_data['content'],
+            'content_length': total_content_length,
+            'links': [{
+                'url': link['url'],
+                'title': link['title'],
+                'content': link['content'],
+                'content_length': link['content_length']
+            } for link in scraped_data['links']]
+        }
+        
+        insert_response = supabase.table('chatbot_scraped_content').insert(insert_data).execute()
 
         if insert_response.data:
             return {
@@ -38,9 +77,14 @@ def scrape_and_add_link(data):
                     'id': scrape_id,
                     'chatbot_id': chatbot_id,
                     'url': url,
-                    'title': title,
-                    'content_preview': content[:200] + '...' if len(content) > 200 else content,
-                    'links_count': len(links)
+                    'title': scraped_data['title'],
+                    'content_length': total_content_length,
+                    'links_count': len(scraped_data['links']),
+                    'links': [{
+                        'url': link['url'],
+                        'title': link['title'],
+                        'content_length': link['content_length']
+                    } for link in scraped_data['links']]
                 }
             }
         else:
@@ -49,31 +93,28 @@ def scrape_and_add_link(data):
     except Exception as e:
         return {'message': f'Error scraping {url}', 'status': 500, 'error': str(e)}
 
-def extract_content(soup):
-    content = []
-    for paragraph in soup.find_all('p'):
-        content.append(paragraph.text.strip())
-    return ' '.join(content)
-
-def extract_links(soup, base_url):
-    links = []
-    for link in soup.find_all('a', href=True):
-        full_url = urljoin(base_url, link['href'])
-        if base_url in full_url:
-            links.append({
-                'url': full_url,
-                'text': link.text.strip()
-            })
-    return links
 def get_chatbot_links(chatbot_id):
     try:
-        response = supabase.table('chatbot_scraped_content').select('*').eq('chatbot_id', chatbot_id).execute()
+        response = supabase.table('chatbot_scraped_content').select('id', 'url', 'title', 'content_length', 'links').eq('chatbot_id', chatbot_id).execute()
         
         if response.data:
+            processed_data = [{
+                'id': item['id'],
+                'url': item['url'],
+                'title': item['title'],
+                'content_length': int(item['content_length']),
+                'links_count': len(item['links']),
+                'links': [{
+                    'url': link['url'],
+                    'title': link['title'],
+                    'content_length': int(link['content_length'])
+                } for link in item['links']]
+            } for item in response.data]
+            
             return {
                 'message': 'Data retrieved successfully',
                 'status': 200,
-                'data': response.data
+                'data': processed_data
             }
         else:
             return {
@@ -85,3 +126,9 @@ def get_chatbot_links(chatbot_id):
             'message': f'Error retrieving data: {str(e)}',
             'status': 500
         }
+
+def extract_content(soup):
+    content = []
+    for paragraph in soup.find_all('p'):
+        content.append(paragraph.text.strip())
+    return ' '.join(content)
