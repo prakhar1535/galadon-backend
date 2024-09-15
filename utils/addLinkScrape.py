@@ -119,7 +119,7 @@ def get_chatbot_links(chatbot_id):
                 'id': item.get('id'),
                 'url': item.get('url', ''),
                 'title': item.get('title', ''),
-                'content_length': len(content),
+                'content_length': item.get('content_length', ''),
                 'links_count': len(links),
                 'links': []
             }
