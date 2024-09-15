@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 import uuid
 from db.db import supabase
+import json
+
 
 def deep_scrape(url, base_url, depth=1):
     if depth == 0:
@@ -95,33 +97,49 @@ def scrape_and_add_link(data):
 
 def get_chatbot_links(chatbot_id):
     try:
-        response = supabase.table('chatbot_scraped_content').select('id', 'url', 'title', 'content_length', 'links').eq('chatbot_id', chatbot_id).execute()
-        
-        if response.data:
-            processed_data = [{
-                'id': item['id'],
-                'url': item['url'],
-                'title': item['title'],
-                'content_length': int(item['content_length']),
-                'links_count': len(item['links']),
-                'links': [{
-                    'url': link['url'],
-                    'title': link['title'],
-                    'content_length': int(link['content_length'])
-                } for link in item['links']]
-            } for item in response.data]
-            
+        print(f"Attempting to retrieve links for chatbot ID: {chatbot_id}")
+
+        # Query the chatbot_content_scraped table
+        response = supabase.table('chatbot_scraped_content').select('*').eq('chatbot_id', chatbot_id).execute()
+        print(f"Query result: {response}")
+
+        if not response.data:
             return {
-                'message': 'Data retrieved successfully',
-                'status': 200,
-                'data': processed_data
-            }
-        else:
-            return {
-                'message': 'No data found for the given chatbot ID',
+                'message': f'No scraped content found for chatbot ID: {chatbot_id}',
                 'status': 404
             }
+
+        # Process the data
+        processed_data = []
+        for item in response.data:
+            content = item.get('content', '')
+            links = json.loads(item.get('links', '[]'))  # Assuming links are stored as a JSON string
+
+            processed_item = {
+                'id': item.get('id'),
+                'url': item.get('url', ''),
+                'title': item.get('title', ''),
+                'content_length': len(content),
+                'links_count': len(links),
+                'links': []
+            }
+
+            for link in links:
+                processed_item['links'].append({
+                    'url': link.get('url', ''),
+                    'content_length': len(link.get('content', ''))
+                })
+
+            processed_data.append(processed_item)
+
+        return {
+            'message': 'Data retrieved successfully',
+            'status': 200,
+            'data': processed_data
+        }
+
     except Exception as e:
+        print(f"Error in get_chatbot_links: {str(e)}")
         return {
             'message': f'Error retrieving data: {str(e)}',
             'status': 500
