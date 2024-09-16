@@ -10,7 +10,7 @@ def create_chatbot(data):
         'model': data.get('model', ''),
         'systemPrompt': data.get('systemPrompt', ''),
         'suggestedMessage': data.get('suggestedMessage', ''),
-        "initialMessage": data.get("suggestedMessage", ""),
+        "initialMessage": data.get("initialMessage", ""),
         'get_user_name': data.get('get_user_name', True),
         'get_user_email': data.get('get_user_email', True),
         'get_user_phone': data.get('get_user_phone', True),
