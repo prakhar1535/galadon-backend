@@ -1,22 +1,18 @@
 from db.db import supabase
 
 def update_chatbot(chatbot_id, data):
-    update_data = {
-        'fontColor': data.get('fontColor', ''),
-        'themeColor': data.get('themeColor', ''),
-        'user': data.get('user', []),
-        'font': data.get('font', ''),
-        'model': data.get('model', ''),
-        'systemPrompt': data.get('systemPrompt', ''),
-        'suggestedMessage': data.get('suggestedMessage', ''),
-        'initialMessage': data.get('initialMessage', '')
-    }
+    # Remove chatbotId from data if present, as it shouldn't be updated
+    data.pop('chatbotId', None)
 
-    response = supabase.table('chatbots').update(update_data).eq('chatbotId', chatbot_id).execute()
+    if not data:
+        return {'message': 'No data provided for update', 'status': 400}
 
-    if response.data:
-        return {'message': 'Chatbot updated successfully', 'status': 200, 'data': response.data}
-    elif response.error:
-        return {'message': 'Failed to update chatbot', 'status': 400, 'error': response.error.message}
-    else:
-        return {'message': 'Unexpected response structure', 'status': 500}
+    try:
+        response = supabase.table('chatbots').update(data).eq('chatbotId', chatbot_id).execute()
+
+        if response.data:
+            return {'message': 'Chatbot updated successfully', 'status': 200, 'data': response.data}
+        else:
+            return {'message': 'No chatbot found with the given ID', 'status': 404}
+    except Exception as e:
+        return {'message': f'Failed to update chatbot: {str(e)}', 'status': 500}
