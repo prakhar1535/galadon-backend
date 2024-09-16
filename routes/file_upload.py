@@ -6,13 +6,13 @@ class FileUploadRoutes:
 
     @file_upload_bp.route('/upload/<chatbot_id>', methods=['POST'])
     def upload_file_route(chatbot_id):
-        if 'file' not in request.files:
-            return jsonify({"message": "No file part"}), 400
-        
-        file = request.files['file']
-        
-        if file.filename == '':
-            return jsonify({"message": "No selected file"}), 400
-        
-        result = upload_file(file, chatbot_id)
+        if 'file' in request.files:
+            file = request.files['file']
+            result = upload_file(file, chatbot_id)
+        elif 'url' in request.form:
+            url = request.form['url']
+            result = upload_file(url, chatbot_id, is_url=True)
+        else:
+            return jsonify({"message": "No file or URL provided"}), 400
+
         return jsonify(result), result['status']

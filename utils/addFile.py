@@ -1,14 +1,22 @@
 from db.db import supabase
+import requests
 
-def upload_file(file, chatbot_id):
-    if not file:
-        return {'message': 'No file provided', 'status': 400}
-    
-    if not file.filename.endswith('.txt'):
-        return {'message': 'Invalid file type. Please upload a .txt file', 'status': 400}
-    
+def upload_file(file_or_url, chatbot_id, is_url=False):
     try:
-        content = file.read().decode('utf-8')
+        if is_url:
+            # Handle cloud link
+            response = requests.get(file_or_url)
+            response.raise_for_status()  # Raise an exception for bad status codes
+            content = response.text
+        else:
+            # Handle file upload
+            if not file_or_url:
+                return {'message': 'No file provided', 'status': 400}
+            
+            if not file_or_url.filename.endswith('.txt'):
+                return {'message': 'Invalid file type. Please upload a .txt file', 'status': 400}
+            
+            content = file_or_url.read().decode('utf-8')
         
         # Check if a record with the given chatbot_id already exists
         result = supabase.table("chatbot_scraped_content").select("id").eq("chatbot_id", chatbot_id).execute()
@@ -27,5 +35,7 @@ def upload_file(file, chatbot_id):
             'status': 200,
             'data': {'id': data[1][0]['id']}
         }
+    except requests.RequestException as e:
+        return {'message': f"Error fetching file from URL: {str(e)}", 'status': 500}
     except Exception as e:
         return {'message': str(e), 'status': 500}
