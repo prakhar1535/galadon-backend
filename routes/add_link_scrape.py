@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from utils.addLinkScrape import scrape_and_add_link, get_chatbot_links
+from db.db import supabase
 class Scrap:
     scrape_bp = Blueprint('scrape_bp', __name__)
 
@@ -24,4 +25,33 @@ class Scrap:
         print(f"Result from get_chatbot_links: {result}")
         
         return jsonify(result), result.get('status', 500)
+    
+    @scrape_bp.route('/get-all-links', methods=['POST'])
+    def get_all_links():
+        data = request.json
+        chatbot_id = data.get('chatbotId')
+
+        if not chatbot_id:
+            return jsonify({'message': 'Chatbot ID is required', 'status': 400}), 400
+
+        try:
+            response = supabase.table('chatbot_scraped_content').select('url', 'title', 'links').eq('chatbot_id', chatbot_id).execute()
+
+            if response.data:
+                return jsonify({
+                    'message': 'Data retrieved successfully',
+                    'status': 200,
+                    'data': response.data
+                }), 200
+            else:
+                return jsonify({
+                    'message': 'No data found for the given chatbot ID',
+                    'status': 404
+                }), 404
+
+        except Exception as e:
+            return jsonify({
+                'message': f'Error retrieving data: {str(e)}',
+                'status': 500
+            }), 500
       
