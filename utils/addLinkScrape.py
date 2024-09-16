@@ -6,9 +6,12 @@ from db.db import supabase
 import json
 
 
-def deep_scrape(url, base_url, depth=1):
-    if depth == 0:
+def deep_scrape(url, base_url, visited_urls=None, depth=1):
+    if depth == 0 or (visited_urls and url in visited_urls):
         return None
+
+    visited_urls = visited_urls or set()
+    visited_urls.add(url)
 
     try:
         response = requests.get(url)
@@ -21,10 +24,14 @@ def deep_scrape(url, base_url, depth=1):
         links = []
         for link in soup.find_all('a', href=True):
             full_url = urljoin(base_url, link['href'])
-            if base_url in full_url:
-                sub_content = deep_scrape(full_url, base_url, depth - 1)
+            if base_url in full_url and full_url not in visited_urls:
+                sub_content = deep_scrape(full_url, base_url, visited_urls, depth - 1)
                 if sub_content:
-                    links.append(sub_content)
+                    # Add a unique ID for each link
+                    sub_content['id'] = str(uuid.uuid4())
+                    # Check for duplicate URLs or titles
+                    if not any(l['url'] == sub_content['url'] or l['title'] == sub_content['title'] for l in links):
+                        links.append(sub_content)
         
         return {
             'url': url,
@@ -62,6 +69,7 @@ def scrape_and_add_link(data):
             'content': scraped_data['content'],
             'content_length': total_content_length,
             'links': [{
+                'id': link['id'],  # Include the unique ID for each link
                 'url': link['url'],
                 'title': link['title'],
                 'content': link['content'],
@@ -75,7 +83,6 @@ def scrape_and_add_link(data):
             return {
                 'message': 'Content scraped and saved successfully',
                 'status': 200,
-                'data': {
                     'id': scrape_id,
                     'chatbot_id': chatbot_id,
                     'url': url,
@@ -83,17 +90,18 @@ def scrape_and_add_link(data):
                     'content_length': total_content_length,
                     'links_count': len(scraped_data['links']),
                     'links': [{
+                        'id': link['id'],
                         'url': link['url'],
                         'title': link['title'],
                         'content_length': link['content_length']
                     } for link in scraped_data['links']]
-                }
             }
         else:
             return {'message': 'Failed to save scraped content', 'status': 500, 'error': insert_response.error.message}
 
     except Exception as e:
         return {'message': f'Error scraping {url}', 'status': 500, 'error': str(e)}
+
 
 def get_chatbot_links(chatbot_id):
     try:
