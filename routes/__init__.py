@@ -11,6 +11,7 @@ from routes.addClient import  ClientRoutes
 from routes.addCredits import CreditsRoutes
 from routes.file_upload import FileUploadRoutes
 from routes.getCredits import GetCreditsRoutes
+from utils.query_chatbot import query_assistant_bp
 def register_apps(app):
     app.register_blueprint(test.testRoute)
     app.register_blueprint(ChatbotRoutes.chatbot_bp)
@@ -24,3 +25,4 @@ def register_apps(app):
     app.register_blueprint(CreditsRoutes.credits_bp)
     app.register_blueprint(FileUploadRoutes.file_upload_bp)
     app.register_blueprint(GetCreditsRoutes.get_credits_bp)
+    app.register_blueprint(query_assistant_bp)
