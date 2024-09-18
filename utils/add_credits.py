@@ -1,14 +1,16 @@
 from db.db import supabase
 from datetime import datetime
-
+import uuid
 def add_credits(data):
+    id  = data.get('id', str(uuid.uuid4()))
     try:
         # Prepare the data for upsert
         credit_data = {
+            'id': id,
             'chatbotId': data.get('chatbotId', ''),
             'credits': data.get('credits', 1),
             'updated_date': datetime.utcnow().isoformat(),
-            'client_id': data.get('client_id', '')
+            
         }
 
         # Use upsert to insert or update the record

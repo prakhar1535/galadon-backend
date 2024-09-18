@@ -19,11 +19,12 @@ class FileUploadRoutes:
         return jsonify(result), result['status']
     @file_upload_bp.route('/delete-file', methods=['DELETE'])
     def delete_file_route():
-            data = request.json
-            chatbot_id = data.get('chatbot_id')
-            
-            if not chatbot_id:
-                return jsonify({'message': 'Chatbot ID is required', 'status': 400}), 400
-            
-            result = delete_file(chatbot_id)
-            return jsonify(result), result['status']
+        data = request.json
+        chatbot_id = data.get('chatbot_id')
+        file_id = data.get('file_id')
+
+        if not chatbot_id or not file_id:
+            return jsonify({'message': 'Both chatbot_id and file_id are required', 'status': 400}), 400
+
+        result = delete_file(chatbot_id, file_id)
+        return jsonify(result), result['status']
