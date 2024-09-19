@@ -5,6 +5,7 @@ uuid
 gunicorn
 bs4
 requests
-flask-cors==3.0.10     
+flask-cors==3.0.10 
+openai    
 datetime 
 unicorn

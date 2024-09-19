@@ -1,11 +1,13 @@
 from db.db import supabase
+from datetime import datetime, timezone
 
 def manage_lead(data):
     user_id = data.get('user_id')
     field = data.get('field')
     value = data.get('value')
+    current_time = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S+00')
 
-    if not user_id or not field or not value:
+    if not user_id or not field or value is None:
         return {'message': 'Missing required fields', 'status': 400}
 
     try:
@@ -16,12 +18,18 @@ def manage_lead(data):
             # If lead doesn't exist, create a new one
             new_lead = {
                 'user_id': user_id,
-                field: value
+                field: value,
+                'created_at': current_time,
+                
             }
             response = supabase.table('leads').insert(new_lead).execute()
         else:
             # If lead exists, update the specific field
-            response = supabase.table('leads').update({field: value}).eq('user_id', user_id).execute()
+            update_data = {
+                field: value,
+                'created_at': current_time
+            }
+            response = supabase.table('leads').update(update_data).eq('user_id', user_id).execute()
 
         if response.data:
             return {'message': 'Lead information updated successfully', 'status': 200, 'data': response.data}
