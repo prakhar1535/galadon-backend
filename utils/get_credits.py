@@ -1,7 +1,6 @@
 from db.db import supabase
-from datetime import datetime
 
-def calculate_total_credits(client_id, start_date, end_date):
+def calculate_total_credits(client_id, start_date, end_date, start_timestamp, end_timestamp):
     try:
         chatbots_response = supabase.table('chatbots').select('chatbotId').eq('client_id', client_id).execute()
 
@@ -26,8 +25,8 @@ def calculate_total_credits(client_id, start_date, end_date):
                 chatbot_credits.append({
                     'chatbot_id': chatbot_id,
                     'total_used_credits': chatbot_total_credits,
-                    'start_date': start_date,
-                    'end_date': end_date
+                    'start_date': start_timestamp,
+                    'end_date': end_timestamp
                 })
 
         if not chatbot_credits:
@@ -37,8 +36,8 @@ def calculate_total_credits(client_id, start_date, end_date):
             'message': 'Total credits calculated successfully',
             'chatbot_credits': chatbot_credits,
             'total_credits_all_chatbots': total_credits_all_chatbots,
-            'start_date': start_date,
-            'end_date': end_date,
+            'start_date': start_timestamp,
+            'end_date': end_timestamp,
             'status': 200
         }
     except Exception as e:
