@@ -1,0 +1,99 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation template to deploy a Docker application on EC2 with .env file creation'
+
+Parameters:
+  KeyName:
+    Description: Name of an existing EC2 KeyPair to enable SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+  SSHLocation:
+    Description: The IP address range that can SSH to the EC2 instance
+    Type: String
+    Default: 0.0.0.0/0
+  EnvVariables:
+    Description: Environment variables for .env file (KEY1=VALUE1,KEY2=VALUE2,...)
+    Type: String
+    Default: ""
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref 'InstanceType'
+      SecurityGroups: [!Ref 'InstanceSecurityGroup']
+      KeyName: !Ref 'KeyName'
+      ImageId: ami-0261755bbcb8c4a84  # Amazon Linux 2 AMI (HVM) - Kernel 5.10, SSD Volume Type
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          yum update -y
+          yum install -y docker
+          service docker start
+          usermod -a -G docker ec2-user
+          chkconfig docker on
+          
+          # Install Docker Compose
+          curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          chmod +x /usr/local/bin/docker-compose
+          
+          # Clone your application (replace with your repository URL)
+          yum install -y git
+          git clone git@github.com:prakhar1535/galadon-backend.git /home/ec2-user/app
+          
+          # Create .env file
+          touch /home/ec2-user/app/.env
+          IFS=',' read -ra ADDR <<< "${EnvVariables}"
+          for i in "${ADDR[@]}"; do
+            echo $i >> /home/ec2-user/app/.env
+          done
+          
+          # Create Dockerfile
+          cat << EOF > /home/ec2-user/app/Dockerfile
+          FROM python:3.11-slim
+          ENV PYTHONDONTWRITEBYTECODE 1
+          ENV PYTHONUNBUFFERED 1
+          WORKDIR /app
+          RUN apt-get update && apt-get install -y --no-install-recommends \
+              build-essential \
+              && rm -rf /var/lib/apt/lists/*
+          COPY . /app
+          RUN chmod +x /app/gunicorn.sh
+          RUN useradd -m appuser
+          RUN chown -R appuser:appuser /app
+          USER appuser
+          EXPOSE 8000
+          CMD ["/app/gunicorn.sh"]
+          EOF
+          
+          # Build and run Docker container
+          cd /home/ec2-user/app
+          docker build -t myapp .
+          docker run -d -p 8000:8000 --env-file .env myapp
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable SSH access and HTTP on port 8000
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: !Ref 'SSHLocation'
+      - IpProtocol: tcp
+        FromPort: 8000
+        ToPort: 8000
+        CidrIp: 0.0.0.0/0
+
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref 'EC2Instance'
+  PublicDNS:
+    Description: Public DNSName of the newly created EC2 instance
+    Value: !GetAtt [EC2Instance, PublicDnsName]
+  PublicIP:
+    Description: Public IP address of the newly created EC2 instance
+    Value: !GetAtt [EC2Instance, PublicIp]
