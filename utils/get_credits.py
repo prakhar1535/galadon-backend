@@ -1,5 +1,5 @@
 from db.db import supabase
-from datetime import datetime, timezone
+from datetime import datetime
 
 def calculate_total_credits(client_id, start_date, end_date):
     try:

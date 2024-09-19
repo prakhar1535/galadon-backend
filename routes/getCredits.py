@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from utils.get_credits import calculate_total_credits
+from datetime import datetime
 
 class GetCreditsRoutes:
     get_credits_bp = Blueprint('get_credits_bp', __name__)
@@ -8,17 +9,18 @@ class GetCreditsRoutes:
     def calculate_total_credits_route():
         data = request.json
         client_id = data.get('clientId')
-        start_timestamp = data.get('start_date')
-        end_timestamp = data.get('end_date')
+        start_date = data.get('start_date')
+        end_date = data.get('end_date')
 
-        if not all([client_id, start_timestamp, end_timestamp]):
+        if not all([client_id, start_date, end_date]):
             return jsonify({'message': 'Missing required parameters. Please provide clientId, start_date, and end_date.'}), 400
 
         try:
-            start_timestamp = int(start_timestamp)
-            end_timestamp = int(end_timestamp)
+            # Validate date format
+            datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S+00')
+            datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S+00')
         except ValueError:
-            return jsonify({'message': 'Invalid date format. Please provide Unix timestamps for start_date and end_date.'}), 400
+            return jsonify({'message': 'Invalid date format. Please provide dates in the format YYYY-MM-DD HH:MM:SS+00.'}), 400
 
-        result = calculate_total_credits(client_id, start_timestamp, end_timestamp)
+        result = calculate_total_credits(client_id, start_date, end_date)
         return jsonify(result), result['status']
