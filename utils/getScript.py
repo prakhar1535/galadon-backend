@@ -1,9 +1,11 @@
 import gzip
 import hashlib
 import requests
+import time
 
 CLOUDINARY_URL = "https://galadon.s3.amazonaws.com/index.js"
 script_cache = {}
+CACHE_EXPIRATION = 300  # 5 minutes in seconds
 
 def get_script(chatbot_id):
     if not chatbot_id:
@@ -11,8 +13,11 @@ def get_script(chatbot_id):
 
     cache_key = f"script_{chatbot_id}"
     
+    current_time = time.time()
     if cache_key in script_cache:
-        return script_cache[cache_key], 200
+        cached_data, timestamp = script_cache[cache_key]
+        if current_time - timestamp < CACHE_EXPIRATION:
+            return cached_data, 200
 
     response = requests.get(CLOUDINARY_URL)
     if response.status_code != 200:
@@ -44,5 +49,5 @@ def get_script(chatbot_id):
         }
     }
 
-    script_cache[cache_key] = script_data
+    script_cache[cache_key] = (script_data, current_time)
     return script_data, 200
