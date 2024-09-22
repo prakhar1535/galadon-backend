@@ -8,5 +8,7 @@ openai
 requests
 flask-cors==3.0.10 
 openai    
+hashlib
+gzip
 datetime 
 unicorn
