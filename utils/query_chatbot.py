@@ -2,20 +2,38 @@ from flask import Blueprint, request, jsonify
 from db.db import supabase
 from openai import AsyncOpenAI
 import os
-
-api_key = os.getenv("OPENAI_API_KEY")
-aclient = AsyncOpenAI(api_key=api_key)
 import json
 import asyncio
 
+api_key = os.getenv("OPENAI_API_KEY")
+aclient = AsyncOpenAI(api_key=api_key)
+
 query_assistant_bp = Blueprint('query_assistant_bp', __name__)
 
+async def get_session(chatbot_id):
+    response = supabase.table('chatbots').select('*').eq('chatbotId', chatbot_id).execute()
+
+    if not response.data:
+        return None
+    session_data = response.data[0]
+    print(f"Model: {session_data.get('model', 'Not found')}")
+    return session_data
+
 async def get_ai_response(message, chatbot_id):
-    response = await aclient.chat.completions.create(model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant for a lead generation chatbot. You have access to a knowledge base. Always be polite and professional. Keep responses concise and include relevant links when available."},
-        {"role": "user", "content": message}
-    ])
+    session_data = await get_session(chatbot_id)
+    
+    if not session_data:
+        raise Exception(f"Session not found for chatbot ID: {chatbot_id}")
+    
+    model = session_data.get("model", "gpt-3.5-turbo") 
+    
+    response = await aclient.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant for a lead generation chatbot.  Pretend you are a potential customer with no information on COMPANY - ask me 5 common questions that they would ask. Starting with the most common. And then answer each question based on your knowledgebase"},
+            {"role": "user", "content": message}
+        ]
+    )
 
     return response.choices[0].message.content
 
@@ -42,14 +60,14 @@ async def answer_query(query, system_prompt, chatbot_id, knowledge_base):
 
         User query: {query}
         """
-
+    
     response = await get_ai_response(prompt, chatbot_id)
     return response
 
 async def fetch_knowledge_base(chatbot_id):
     knowledge_base = {}
     try:
-        response = get_all_links(chatbot_id)
+        response = await get_all_links(chatbot_id)
         if isinstance(response, dict) and 'data' in response:
             for item in response['data']:
                 main_url = item.get('url')
@@ -86,7 +104,8 @@ async def fetch_knowledge_base(chatbot_id):
         print("No additional knowledge base available. The chatbot will operate with basic information.")
 
     return knowledge_base
-def get_all_links(chatbot_id):
+
+async def get_all_links(chatbot_id):
     try:
         response = supabase.table('chatbot_scraped_content').select('url', 'title', 'links').eq('chatbot_id', chatbot_id).execute()
 
@@ -123,10 +142,11 @@ def query_assistant():
         asyncio.set_event_loop(loop)
         knowledge_base = loop.run_until_complete(fetch_knowledge_base(chatbot_id))
         if question_prompt:
-            system_prompt = f"""You are a helpful assistant for a lead generation chatbot. You have access to a knowledge base. Always be polite and professional. Keep responses concise and include relevant links when available. Also make sure you consider this: {question_prompt}"""
+            system_prompt = f"""You are a helpful assistant for a lead generation chatbot.  Pretend you are a potential customer with no information on COMPANY - ask me 5 common questions that they would ask. Starting with the most common. And then answer each question based on your knowledgebase for this question : {question_prompt}"""
         else:
-            system_prompt = "You are a helpful assistant for a lead generation chatbot. You have access to a knowledge base. Always be polite and professional. Keep responses concise and include relevant links when available."        
-            response = loop.run_until_complete(answer_query(message, system_prompt, chatbot_id, knowledge_base))
+            system_prompt = "You are a helpful assistant for a lead generation chatbot. You have access to a knowledge base. Always be polite and professional. Keep responses concise and include relevant links when available."
+        
+        response = loop.run_until_complete(answer_query(message, system_prompt, chatbot_id, knowledge_base))
 
         return jsonify({
             'message': 'Response generated successfully',

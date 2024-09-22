@@ -23,6 +23,7 @@ class ChatbotRoutes:
     def delete_chatbot_route(chatbot_id):
         result = delete_chatbot(chatbot_id)
         return jsonify(result), result.get('status', 500)
+
     @chatbot_bp.route('/get-chat-history', methods=['POST'])
     def get_chat_history():
         data = request.json
@@ -32,7 +33,6 @@ class ChatbotRoutes:
             return jsonify({'message': 'User ID is required', 'status': 400}), 400
 
         try:
-           
             response = supabase.table('users').select('messages').eq('userId', user_id).execute()
 
             if not response.data:
@@ -48,3 +48,26 @@ class ChatbotRoutes:
 
         except Exception as e:
             return jsonify({'message': f'Error retrieving chat history: {str(e)}', 'status': 500}), 500
+
+    @chatbot_bp.route('/delete-chat-history', methods=['POST'])
+    def delete_chat_history():
+        data = request.json
+        user_id = data.get('userId')
+
+        if not user_id:
+            return jsonify({'message': 'User ID is required', 'status': 400}), 400
+
+        try:
+            # Update the user's messages to an empty array
+            response = supabase.table('users').update({'messages': []}).eq('userId', user_id).execute()
+
+            if not response.data:
+                return jsonify({'message': 'No user found with the given user ID', 'status': 404}), 404
+
+            return jsonify({
+                'message': 'Chat history deleted successfully',
+                'status': 200
+            }), 200
+
+        except Exception as e:
+            return jsonify({'message': f'Error deleting chat history: {str(e)}', 'status': 500}), 500

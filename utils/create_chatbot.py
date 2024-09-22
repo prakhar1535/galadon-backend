@@ -22,7 +22,9 @@ def create_chatbot(data):
         'phone_msg': data.get('phone_msg', ''),
         'client_id': data.get('client_id', ''),
         'chatbot_name': data.get('chatbot_name', ''),
-        'avatarUrl': data.get('avatarUrl', '')
+        'avatarUrl': data.get('avatarUrl', ''),
+        'themeColor': data.get('themeColor', ''),
+        'fontColor': data.get('fontColor', '')
     }
 
     response = supabase.table('chatbots').insert(chatbot_data).execute()
