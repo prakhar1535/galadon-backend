@@ -18,8 +18,8 @@ class GetCreditsRoutes:
                 return jsonify({'message': 'Missing required parameters. Please provide clientId, start_date, and end_date.'}), 400
 
             # Convert input strings to datetime objects
-            start_datetime = datetime.strptime(start_date, '%Y-%m-%d %H:%M:%S+00').replace(tzinfo=timezone.utc)
-            end_datetime = datetime.strptime(end_date, '%Y-%m-%d %H:%M:%S+00').replace(tzinfo=timezone.utc)
+            start_datetime = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+            end_datetime = datetime.strptime(end_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
             
             # Convert datetime objects to Unix timestamps (in seconds)
             start_timestamp = int(start_datetime.timestamp())
