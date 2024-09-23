@@ -45,7 +45,7 @@ def calculate_total_credits(client_id, start_date, end_date, start_timestamp, en
         ]
         
         result = {
-            "chatbot_credits": [{"perday": perday_list}],
+            "chatbot_credits": perday_list,
             "end_date": end_timestamp,
             "message": "Total credits calculated successfully",
             "start_date": start_timestamp,
