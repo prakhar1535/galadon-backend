@@ -4,7 +4,7 @@ from utils.getScript import get_script
 class GetChatbotScript:
     getChatbotScript = Blueprint('getChatbotScript', __name__)
 
-    @getChatbotScript.route('/get-chatbot-script/<chatbot_id>', methods=['GET'])
+    @getChatbotScript.route('/livechat/<chatbot_id>', methods=['GET'])
     def generate_chatbot(chatbot_id):
         try:
             script_data, status_code = get_script(chatbot_id)
