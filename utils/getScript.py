@@ -3,7 +3,7 @@ import hashlib
 import requests
 import time
 
-CLOUDINARY_URL = "https://galadon.s3.amazonaws.com/index.js"
+CLOUDINARY_URL = "https://d39gr3z2pqgj6a.cloudfront.net/index.js"
 script_cache = {}
 CACHE_EXPIRATION = 300  # 5 minutes in seconds
 
@@ -29,7 +29,7 @@ def get_script(chatbot_id):
     {cloudinary_script}
 
     window.mountChainlitWidget({{
-        chainlitServer: "https://livechat.galadon.com/live",
+        chainlitServer: "http://0.0.0.0:8066/live",
         theme: "light",
         chatBotID: "{chatbot_id}",
     }});
