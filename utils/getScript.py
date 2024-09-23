@@ -29,7 +29,7 @@ def get_script(chatbot_id):
     {cloudinary_script}
 
     window.mountChainlitWidget({{
-        chainlitServer: "http://0.0.0.0:8066/live",
+        chainlitServer: "https://livechat.galadon.com/live",
         theme: "light",
         chatBotID: "{chatbot_id}",
     }});
