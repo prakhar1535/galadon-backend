@@ -38,7 +38,7 @@ def calculate_total_credits(client_id, start_date, end_date, start_timestamp, en
         
         perday_list = [
             {
-                "date": date.isoformat(),
+                "date": int(datetime.combine(date, datetime.min.time()).replace(tzinfo=timezone.utc).timestamp()),
                 "total_credits": total_credits
             }
             for date, total_credits in credits_per_day.items()
