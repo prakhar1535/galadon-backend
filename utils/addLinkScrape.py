@@ -61,6 +61,15 @@ def scrape_and_add_link(data):
         
         scrape_id = str(uuid.uuid4())
         
+        # Include the main URL in the links array
+        main_link = {
+            'id': str(uuid.uuid4()),
+            'url': url,
+            'title': scraped_data['title'],
+            'content': scraped_data['content'],
+            'content_length': scraped_data['content_length']
+        }
+        
         insert_data = {
             'id': scrape_id,
             'chatbot_id': chatbot_id,
@@ -68,8 +77,8 @@ def scrape_and_add_link(data):
             'title': scraped_data['title'],
             'content': scraped_data['content'],
             'content_length': total_content_length,
-            'links': [{
-                'id': link['id'],  # Include the unique ID for each link
+            'links': [main_link] + [{
+                'id': link['id'],
                 'url': link['url'],
                 'title': link['title'],
                 'content': link['content'],
@@ -83,18 +92,18 @@ def scrape_and_add_link(data):
             return {
                 'message': 'Content scraped and saved successfully',
                 'status': 200,
-                    'id': scrape_id,
-                    'chatbot_id': chatbot_id,
-                    'url': url,
-                    'title': scraped_data['title'],
-                    'content_length': total_content_length,
-                    'links_count': len(scraped_data['links']),
-                    'links': [{
-                        'id': link['id'],
-                        'url': link['url'],
-                        'title': link['title'],
-                        'content_length': link['content_length']
-                    } for link in scraped_data['links']]
+                'id': scrape_id,
+                'chatbot_id': chatbot_id,
+                'url': url,
+                'title': scraped_data['title'],
+                'content_length': total_content_length,
+                'links_count': len(insert_data['links']),
+                'links': [{
+                    'id': link['id'],
+                    'url': link['url'],
+                    'title': link['title'],
+                    'content_length': link['content_length']
+                } for link in insert_data['links']]
             }
         else:
             return {'message': 'Failed to save scraped content', 'status': 500, 'error': insert_response.error.message}
@@ -135,7 +144,7 @@ def get_chatbot_links(chatbot_id):
             for link in links:
                 processed_item['links'].append({
                     'url': link.get('url', ''),
-                    'content_length': len(link.get('content', ''))
+                    'content_length': link.get('content_length', 0)
                 })
 
             processed_data.append(processed_item)
