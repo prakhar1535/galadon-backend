@@ -144,7 +144,7 @@ def query_assistant():
         if question_prompt:
             system_prompt = f"""You are a helpful assistant for a lead generation chatbot.  Pretend you are a potential customer with no information on COMPANY - ask me 5 common questions that they would ask. Starting with the most common. And then answer each question based on your knowledgebase for this question : {question_prompt}"""
         else:
-            system_prompt = "You are a helpful assistant for a lead generation chatbot. You have access to a knowledge base. Always be polite and professional. Keep responses concise and include relevant links when available."
+            system_prompt = knowledge_base
         
         response = loop.run_until_complete(answer_query(message, system_prompt, chatbot_id, knowledge_base))
 
