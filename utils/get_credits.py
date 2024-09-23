@@ -13,11 +13,11 @@ def calculate_total_credits(client_id, start_date, end_date, start_timestamp, en
         
         chatbot_ids = [chatbot['chatbotId'] for chatbot in chatbots_response.data]
         
-        credits_per_day = defaultdict(lambda: defaultdict(int))
+        credits_per_day = defaultdict(int)
         total_credits_all_chatbots = 0
         
         # Query credits for all chatbots in a single query
-        credit_response = supabase.table('credit').select('credits', 'updated_date', 'chatbotId') \
+        credit_response = supabase.table('credit').select('credits', 'updated_date') \
             .in_('chatbotId', chatbot_ids) \
             .gte('updated_date', start_date) \
             .lte('updated_date', end_date) \
@@ -27,9 +27,8 @@ def calculate_total_credits(client_id, start_date, end_date, start_timestamp, en
             for entry in credit_response.data:
                 try:
                     entry_date = parser.isoparse(entry['updated_date'])
-                    chatbot_id = entry['chatbotId']
                     credits = entry['credits']
-                    credits_per_day[entry_date.date()][chatbot_id] += credits
+                    credits_per_day[entry_date.date()] += credits
                     total_credits_all_chatbots += credits
                 except Exception as e:
                     print(f"Error processing entry: {entry}, Error: {str(e)}")
@@ -40,12 +39,9 @@ def calculate_total_credits(client_id, start_date, end_date, start_timestamp, en
         perday_list = [
             {
                 "date": date.isoformat(),
-                "chatbots": [
-                    {"chatbotId": chatbot_id, "totalCredits": credits}
-                    for chatbot_id, credits in daily_credits.items()
-                ]
+                "total_credits": total_credits
             }
-            for date, daily_credits in credits_per_day.items()
+            for date, total_credits in credits_per_day.items()
         ]
         
         result = {
