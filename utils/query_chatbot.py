@@ -72,8 +72,9 @@ async def fetch_knowledge_base(chatbot_id):
             for item in response['data']:
                 main_url = item.get('url')
                 main_title = item.get('title')
+                main_content = item.get('content')
                 if main_url:
-                    knowledge_base[main_url] = {'title': main_title, 'content': '', 'type': 'main_link'}
+                    knowledge_base[main_url] = {'title': main_title, 'content': main_content, 'type': 'main_link'}
 
                 links = item.get('links', [])
                 if isinstance(links, str):
@@ -87,8 +88,9 @@ async def fetch_knowledge_base(chatbot_id):
                     if isinstance(link, dict):
                         link_url = link.get('url')
                         link_title = link.get('title')
+                        link_content = link.get('content', '')
                         if link_url:
-                            knowledge_base[link_url] = {'title': link_title, 'content': '', 'type': 'sub_link'}
+                            knowledge_base[link_url] = {'title': link_title, 'content': link_content, 'type': 'sub_link'}
 
             print(f"Successfully fetched knowledge base for chatbot ID: {chatbot_id}")
             print(f"Total knowledge base entries: {len(knowledge_base)}")

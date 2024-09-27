@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse, urlunparse
 import uuid
 from db.db import supabase
 import json
@@ -8,11 +8,17 @@ import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import deque
 import time
-
+def normalize_url(url):
+    """Normalize the URL by removing the trailing slash if present."""
+    parsed = urlparse(url)
+    path = parsed.path
+    if path.endswith('/'):
+        path = path[:-1]
+    return urlunparse((parsed.scheme, parsed.netloc, path, parsed.params, parsed.query, parsed.fragment))
 def deep_scrape(start_url, max_pages=100, max_depth=5):
     base_url = urlparse(start_url).scheme + "://" + urlparse(start_url).netloc
     visited_urls = set()
-    to_visit = deque([(start_url, 0)])  # (url, depth)
+    to_visit = deque([(normalize_url(start_url), 0)])  # (url, depth)
     all_content = []
     
     while to_visit and len(visited_urls) < max_pages:
@@ -41,8 +47,9 @@ def deep_scrape(start_url, max_pages=100, max_depth=5):
             })
             
             for link in page_links:
-                if link not in visited_urls:
-                    to_visit.append((link, depth + 1))
+                normalized_link = normalize_url(link)
+                if normalized_link not in visited_urls:
+                    to_visit.append((normalized_link, depth + 1))
             
             time.sleep(1)  # Polite delay between requests
         
@@ -85,8 +92,9 @@ def extract_links(soup, base_url):
     for a_tag in soup.find_all('a', href=True):
         href = a_tag['href']
         full_url = urljoin(base_url, href)
-        if is_valid_link(full_url, base_url):
-            links.add(full_url)
+        normalized_url = normalize_url(full_url)
+        if is_valid_link(normalized_url, base_url):
+            links.add(normalized_url)
     return list(links)
 
 def is_valid_link(url, base_url):
@@ -96,12 +104,15 @@ def is_valid_link(url, base_url):
 
 def scrape_and_add_link(data):
     chatbot_id = data.get('chatbotId')
-    url = data.get('url')
+    url = normalize_url(data.get('url', ''))
     
     if not chatbot_id or not url:
         return {'message': 'Chatbot ID and URL are required', 'status': 400}
 
     try:
+        # Check if a record already exists for this chatbot_id
+        existing_record = supabase.table('chatbot_scraped_content').select('id').eq('chatbot_id', chatbot_id).execute()
+
         scraped_data = deep_scrape(url, max_pages=50, max_depth=3)
         
         if not scraped_data:
@@ -109,10 +120,7 @@ def scrape_and_add_link(data):
         
         total_content_length = sum(page['content_length'] for page in scraped_data)
         
-        scrape_id = str(uuid.uuid4())
-        
         insert_data = {
-            'id': scrape_id,
             'chatbot_id': chatbot_id,
             'url': url,
             'title': scraped_data[0]['title'],
@@ -120,34 +128,59 @@ def scrape_and_add_link(data):
             'content_length': total_content_length,
             'links': json.dumps([{
                 'id': page['id'],
-                'url': page['url'],
+                'url': normalize_url(page['url']),
                 'title': page['title'],
                 'content': page['content'],
                 'content_length': page['content_length']
             } for page in scraped_data])  # Include all pages, including the main one
         }
         
-        insert_response = supabase.table('chatbot_scraped_content').insert(insert_data).execute()
-
-        if insert_response.data:
-            return {
-                'message': 'Content scraped and saved successfully',
-                'status': 200,
-                'id': scrape_id,
-                'chatbot_id': chatbot_id,
-                'url': url,
-                'title': scraped_data[0]['title'],
-                'content_length': total_content_length,
-                'links_count': len(scraped_data),
-                'links': [{
-                    'id': page['id'],
-                    'url': page['url'],
-                    'title': page['title'],
-                    'content_length': page['content_length']
-                } for page in scraped_data]
-            }
+        if existing_record.data:
+            # Update existing record
+            existing_id = existing_record.data[0]['id']
+            update_response = supabase.table('chatbot_scraped_content').update(insert_data).eq('id', existing_id).execute()
+            if update_response.data:
+                return {
+                    'message': 'Content updated successfully',
+                    'status': 200,
+                    'id': existing_id,
+                    'chatbot_id': chatbot_id,
+                    'url': url,
+                    'title': scraped_data[0]['title'],
+                    'content_length': total_content_length,
+                    'links_count': len(scraped_data),
+                    'links': [{
+                        'id': page['id'],
+                        'url': normalize_url(page['url']),
+                        'title': page['title'],
+                        'content_length': page['content_length']
+                    } for page in scraped_data]
+                }
+            else:
+                return {'message': 'Failed to update scraped content', 'status': 500, 'error': update_response.error.message}
         else:
-            return {'message': 'Failed to save scraped content', 'status': 500, 'error': insert_response.error.message}
+            # Insert new record
+            insert_data['id'] = str(uuid.uuid4())
+            insert_response = supabase.table('chatbot_scraped_content').insert(insert_data).execute()
+            if insert_response.data:
+                return {
+                    'message': 'Content scraped and saved successfully',
+                    'status': 200,
+                    'id': insert_data['id'],
+                    'chatbot_id': chatbot_id,
+                    'url': url,
+                    'title': scraped_data[0]['title'],
+                    'content_length': total_content_length,
+                    'links_count': len(scraped_data),
+                    'links': [{
+                        'id': page['id'],
+                        'url': normalize_url(page['url']),
+                        'title': page['title'],
+                        'content_length': page['content_length']
+                    } for page in scraped_data]
+                }
+            else:
+                return {'message': 'Failed to save scraped content', 'status': 500, 'error': insert_response.error.message}
 
     except Exception as e:
         return {'message': f'Error scraping {url}', 'status': 500, 'error': str(e)}
