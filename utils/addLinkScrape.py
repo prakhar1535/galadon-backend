@@ -61,7 +61,22 @@ def extract_content(soup):
             continue
         text = tag.get_text(strip=True)
         if text:
-            content.append(f"{tag.name.upper()}: {text}")
+            if tag.name in ['h1', 'h2', 'h3', 'h4', 'h5', 'h6']:
+                heading_level = int(tag.name[1])
+                content.append(f"{'#' * heading_level} {text}")
+            elif tag.name == 'p':
+                content.append(f"\n{text}\n")
+            elif tag.name == 'a':
+                href = tag.get('href')
+                if href:
+                    content.append(f"[{text}]({href})")
+                else:
+                    content.append(text)
+            elif tag.name in ['ul', 'ol']:
+                for li in tag.find_all('li', recursive=False):
+                    content.append(f"- {li.get_text(strip=True)}")
+            else:
+                content.append(text)
 
     return '\n'.join(content)
 
